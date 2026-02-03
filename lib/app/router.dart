@@ -16,7 +16,7 @@ class AppRouter {
     routes: <RouteBase>[
       GoRoute(
         path: '/',
-        redirect: (context, state) => '/home',
+        redirect: (context, state) => '/curriculum',
       ),
       ...authRoutes,
       ShellRoute(
@@ -39,7 +39,7 @@ class AppRouter {
       }
 
       if (isAuthed && isLoginRoute) {
-        return '/home';
+        return '/curriculum';
       }
 
       return null;

@@ -13,7 +13,7 @@ class MainShellScreen extends StatelessWidget {
   });
 
   int _getSelectedIndex() {
-    final paths = ['/home', '/learning', '/speaking', '/review', '/profile'];
+    final paths = [ '/curriculum', '/speaking', '/review', '/profile'];
     int index = paths.indexWhere((path) => location.startsWith(path));
     return index >= 0 ? index : 0;
   }

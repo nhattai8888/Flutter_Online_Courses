@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lingougo/core/network/api_client.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../../core/auth/auth_state.dart';
-import '../../../core/network/dio_instance.dart';
 import '../../../core/notify/app_toast.dart';
 import '../../../core/ui/neumorphic_card.dart';
 
@@ -15,7 +15,7 @@ class ProfileTab extends StatefulWidget {
 }
 
 class _ProfileTabState extends State<ProfileTab> {
-  late final DioInstance _dioInstance;
+  final _dio = ApiClient.instance.dio;
   late final LocalAuthentication _localAuth;
   late final FlutterSecureStorage _storage;
 
@@ -36,7 +36,6 @@ class _ProfileTabState extends State<ProfileTab> {
   @override
   void initState() {
     super.initState();
-    _dioInstance = DioInstance();
     _localAuth = LocalAuthentication();
     _storage = const FlutterSecureStorage();
     _initProfile();
@@ -63,11 +62,11 @@ class _ProfileTabState extends State<ProfileTab> {
       }
 
       // Load user data from /auth/me
-      final userResponse = await _dioInstance.get('/auth/me');
+      final userResponse = await _dio.get('/auth/me');
       if (userResponse.statusCode == 200) {
         final userData = userResponse.data['data'];
         setState(() {
-          userName = userData['name'] ?? 'User';
+          userName = userData['display_ name'] ?? 'User';
           userEmail = userData['email'] ?? '';
           userRole = userData['role'] ?? 'student';
           userPermissions = List<String>.from(userData['permissions'] ?? []);

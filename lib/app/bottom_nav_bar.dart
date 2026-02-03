@@ -32,7 +32,7 @@ class AppBottomNavBar extends StatelessWidget {
         BottomNavigationBarItem(
           icon: const Icon(Icons.school_outlined),
           activeIcon: const Icon(Icons.school),
-          label: 'Học',
+          label: 'Ngữ pháp',
         ),
         BottomNavigationBarItem(
           icon: const Icon(Icons.mic_outlined),
@@ -51,7 +51,7 @@ class AppBottomNavBar extends StatelessWidget {
         ),
       ],
       onTap: (index) {
-        final paths = ['/home', '/learning', '/speaking', '/review', '/profile'];
+        final paths = ['/curriculum', '/speaking', '/review', '/profile'];
         _navigateTo(context, paths[index]);
       },
     );

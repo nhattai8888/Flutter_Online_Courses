@@ -4,15 +4,16 @@ import '../../../core/types/api_response.dart';
 class CurriculumApi {
   final _dio = ApiClient.instance.dio;
 
-  // --- Paths ---
+  // --- Paths (curriculum) ---
   static const String _languages = '/curriculum/languages';
   static const String _levelsByLanguage = '/curriculum/levels/by-language';
   static const String _unitsByLanguage = '/curriculum/units/by-language';
-
-  // UPDATED: lessons by unit
   static const String _lessonsByUnit = '/curriculum/lessons/by-unit';
-
   static const String _lessons = '/curriculum/lessons';
+
+  // --- Paths (auth / lesson-engine) ---
+  static const String _authMe = '/auth/me';
+  static const String _attemptsUser = '/lesson-engine/attempts/user';
 
   ApiResponse<dynamic> _wrap(dynamic raw) {
     final map = (raw as Map).cast<String, dynamic>();
@@ -57,7 +58,7 @@ class CurriculumApi {
     return _wrap(res.data);
   }
 
-  // UPDATED: Lessons by unit
+  // Lessons by unit (REAL API)
   Future<ApiResponse<dynamic>> listLessonsByUnit({
     required String unitId,
     int limit = 50,
@@ -75,6 +76,31 @@ class CurriculumApi {
 
   Future<ApiResponse<dynamic>> getLesson(String lessonId) async {
     final res = await _dio.get('$_lessons/$lessonId');
+    return _wrap(res.data);
+  }
+
+  // Auth Me (REAL API)
+  Future<ApiResponse<dynamic>> getMe() async {
+    final res = await _dio.get(_authMe);
+    return _wrap(res.data);
+  }
+
+  // Lesson attempts list (REAL API)
+  Future<ApiResponse<dynamic>> listUserAttempts({
+    required String userId,
+    String? lessonId,
+    int limit = 200,
+    int offset = 0,
+  }) async {
+    final path = '$_attemptsUser/$userId';
+    final res = await _dio.get(
+      path,
+      queryParameters: {
+        if (lessonId != null && lessonId.isNotEmpty) 'lesson_id': lessonId,
+        'limit': limit,
+        'offset': offset,
+      },
+    );
     return _wrap(res.data);
   }
 }
