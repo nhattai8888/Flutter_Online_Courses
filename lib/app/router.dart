@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lingougo/modules/vocabulary/routes.dart';
 import '../core/auth/auth_state.dart';
 import '../modules/auth/index.dart';
 import '../modules/curriculum/routes.dart';
@@ -19,6 +20,7 @@ class AppRouter {
         redirect: (context, state) => '/curriculum',
       ),
       ...authRoutes,
+      ...vocabRoutes,
       ShellRoute(
         builder: (context, state, child) => MainShellScreen(
           child: child,
