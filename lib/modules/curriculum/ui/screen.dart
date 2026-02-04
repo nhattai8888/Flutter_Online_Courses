@@ -4,6 +4,7 @@ import '../data/repository_impl.dart';
 import '../domain/entity.dart';
 import '../domain/usecases.dart';
 import 'controller.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/notify/app_toast.dart';
 
@@ -27,7 +28,8 @@ class _CurriculumScreenState extends State<CurriculumScreen> {
     super.initState();
 
     final repo = CurriculumRepositoryImpl(CurriculumApi());
-    controller = widget.controller ??
+    controller =
+        widget.controller ??
         CurriculumController(
           listLanguages: ListLanguagesUseCase(repo),
           listLevels: ListLevelsByLanguageUseCase(repo),
@@ -104,20 +106,29 @@ class _CurriculumScreenState extends State<CurriculumScreen> {
             ),
           ),
           // Soft blobs
-          const Positioned(top: -90, left: -70, child: _Blob(size: 240, color: Colors.white24)),
-          const Positioned(bottom: -110, right: -80, child: _Blob(size: 300, color: Colors.white12)),
+          const Positioned(
+            top: -90,
+            left: -70,
+            child: _Blob(size: 240, color: Colors.white24),
+          ),
+          const Positioned(
+            bottom: -110,
+            right: -80,
+            child: _Blob(size: 300, color: Colors.white12),
+          ),
 
           SafeArea(
             child: AnimatedBuilder(
               animation: controller,
               builder: (_, __) {
                 final isInitialLoading =
-                  controller.status == CurriculumStatus.loading && controller.languages.isEmpty;
+                    controller.status == CurriculumStatus.loading &&
+                    controller.languages.isEmpty;
 
                 // Only show lessons that are published
                 final publishedLessons = controller.lessons
-                  .where((l) => l.publishStatus == PublishStatus.published)
-                  .toList();
+                    .where((l) => l.publishStatus == PublishStatus.published)
+                    .toList();
 
                 return Center(
                   child: ConstrainedBox(
@@ -132,14 +143,21 @@ class _CurriculumScreenState extends State<CurriculumScreen> {
                           centerTitle: true,
                           title: const Text(
                             'Ngôn ngữ của tôi',
-                            style: TextStyle(fontWeight: FontWeight.w900, color: Colors.white),
+                            style: TextStyle(
+                              fontWeight: FontWeight.w900,
+                              color: Colors.white,
+                            ),
                           ),
                           actions: [
                             IconButton(
-                              onPressed: controller.status == CurriculumStatus.loading
+                              onPressed:
+                                  controller.status == CurriculumStatus.loading
                                   ? null
                                   : controller.loadLanguages,
-                              icon: const Icon(Icons.refresh_rounded, color: Colors.white),
+                              icon: const Icon(
+                                Icons.refresh_rounded,
+                                color: Colors.white,
+                              ),
                               tooltip: 'Refresh',
                             ),
                             const SizedBox(width: 6),
@@ -149,144 +167,164 @@ class _CurriculumScreenState extends State<CurriculumScreen> {
                         SliverPadding(
                           padding: const EdgeInsets.fromLTRB(16, 12, 16, 120),
                           sliver: SliverList(
-                            delegate: SliverChildListDelegate(
-                              [
-                                // Hero
-                                _GlassCard(
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(14),
-                                    child: Row(
-                                      children: [
-                                        _HeroBadge(
-                                          title: 'Ngôn ngữ',
-                                          subtitle: '${controller.lessons.length}',
-                                        ),
-                                        const SizedBox(width: 12),
-                                        const Expanded(
-                                          child: Text(
-                                            'Vui lòng chọn Ngôn Ngữ để học',
-                                            style: TextStyle(
-                                              color: Colors.white,
-                                              fontWeight: FontWeight.w800,
-                                              height: 1.2,
-                                            ),
+                            delegate: SliverChildListDelegate([
+                              // Hero
+                              _GlassCard(
+                                child: Padding(
+                                  padding: const EdgeInsets.all(14),
+                                  child: Row(
+                                    children: [
+                                      _HeroBadge(
+                                        title: 'Ngôn ngữ',
+                                        subtitle:
+                                            '${controller.lessons.length}',
+                                      ),
+                                      const SizedBox(width: 12),
+                                      const Expanded(
+                                        child: Text(
+                                          'Vui lòng chọn Ngôn Ngữ để học',
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.w800,
+                                            height: 1.2,
                                           ),
                                         ),
-                                      ],
-                                    ),
+                                      ),
+                                    ],
                                   ),
                                 ),
-                                const SizedBox(height: 14),
+                              ),
+                              const SizedBox(height: 14),
 
-                                if (isInitialLoading) const _SkeletonDuolingo(),
+                              if (isInitialLoading) const _SkeletonDuolingo(),
 
-                                if (!isInitialLoading && controller.languages.isEmpty) ...[
-                                  _EmptyState(onRetry: controller.loadLanguages),
-                                ] else if (!isInitialLoading) ...[
-                                  // Language
-                                  const _SectionHeader(
-                                    icon: Icons.language_rounded,
-                                    title: 'Ngôn ngữ',
-                                  ),
-                                  const SizedBox(height: 8),
-                                  _ChipsRow<Language>(
-                                    items: controller.languages,
-                                    isSelected: (x) => x.id == controller.selectedLanguage?.id,
-                                    label: (x) => x.name,
-                                    onTap: (x) => controller.selectLanguage(x),
-                                  ),
-                                  const SizedBox(height: 16),
+                              if (!isInitialLoading &&
+                                  controller.languages.isEmpty) ...[
+                                _EmptyState(onRetry: controller.loadLanguages),
+                              ] else if (!isInitialLoading) ...[
+                                // Language
+                                const _SectionHeader(
+                                  icon: Icons.language_rounded,
+                                  title: 'Ngôn ngữ',
+                                ),
+                                const SizedBox(height: 8),
+                                _ChipsRow<Language>(
+                                  items: controller.languages,
+                                  isSelected: (x) =>
+                                      x.id == controller.selectedLanguage?.id,
+                                  label: (x) => x.name,
+                                  onTap: (x) => controller.selectLanguage(x),
+                                ),
+                                const SizedBox(height: 16),
 
-                                  // Level
-                                  const _SectionHeader(
-                                    icon: Icons.stairs_rounded,
-                                    title: 'Trình độ',
-                                  ),
-                                  const SizedBox(height: 8),
-                                  _ChipsRow<Level>(
-                                    items: controller.levels,
-                                    isSelected: (x) => x.id == controller.selectedLevel?.id,
-                                    label: (x) => '${x.code} - ${x.name}',
-                                    onTap: (x) => controller.selectLevel(x),
-                                  ),
-                                  const SizedBox(height: 16),
+                                // Level
+                                const _SectionHeader(
+                                  icon: Icons.stairs_rounded,
+                                  title: 'Trình độ',
+                                ),
+                                const SizedBox(height: 8),
+                                _ChipsRow<Level>(
+                                  items: controller.levels,
+                                  isSelected: (x) =>
+                                      x.id == controller.selectedLevel?.id,
+                                  label: (x) => '${x.code} - ${x.name}',
+                                  onTap: (x) => controller.selectLevel(x),
+                                ),
+                                const SizedBox(height: 16),
 
-                                  // Units
-                                  Row(
-                                    children: [
-                                      const _SectionHeader(
-                                        icon: Icons.view_agenda_rounded,
-                                        title: 'Bài học',
+                                // Units
+                                Row(
+                                  children: [
+                                    const _SectionHeader(
+                                      icon: Icons.view_agenda_rounded,
+                                      title: 'Bài học',
+                                    ),
+                                    const Spacer(),
+                                    TextButton.icon(
+                                      onPressed: controller.selectedUnit == null
+                                          ? null
+                                          : () => controller.selectUnit(null),
+                                      icon: const Icon(
+                                        Icons.clear_rounded,
+                                        color: Colors.white,
                                       ),
-                                      const Spacer(),
-                                      TextButton.icon(
-                                        onPressed: controller.selectedUnit == null ? null : () => controller.selectUnit(null),
-                                        icon: const Icon(Icons.clear_rounded, color: Colors.white),
-                                        label: const Text(
-                                          'Xóa',
-                                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900),
+                                      label: const Text(
+                                        'Xóa',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.w900,
                                         ),
                                       ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 8),
-                                  _UnitCards(
-                                    units: controller.units,
-                                    selectedUnitId: controller.selectedUnit?.id,
-                                    onTap: (u) => controller.selectUnit(u),
-                                  ),
-                                  const SizedBox(height: 18),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                _UnitCards(
+                                  units: controller.units,
+                                  selectedUnitId: controller.selectedUnit?.id,
+                                  onTap: (u) => controller.selectUnit(u),
+                                ),
+                                const SizedBox(height: 18),
 
-                                  // Lessons (Duolingo Path)
-                                  Row(
-                                    children: [
-                                      const _SectionHeader(
-                                        icon: Icons.route_rounded,
-                                        title: 'Lộ trình học tập',
+                                // Lessons (Duolingo Path)
+                                Row(
+                                  children: [
+                                    const _SectionHeader(
+                                      icon: Icons.route_rounded,
+                                      title: 'Lộ trình học tập',
+                                    ),
+                                    const Spacer(),
+                                    _CountPill(
+                                      count: controller.lessons
+                                          .where(
+                                            (l) =>
+                                                l.publishStatus ==
+                                                PublishStatus.published,
+                                          )
+                                          .length,
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 10),
+
+                                if (publishedLessons.isEmpty &&
+                                    !controller.loadingMore) ...[
+                                  const _SoftInfo(
+                                    text: 'Chưa có lesson cho bộ lọc hiện tại.',
+                                  ),
+                                ] else ...[
+                                  _DuolingoPath(
+                                    lessons: publishedLessons,
+                                    onTapLesson: (lesson) {
+                                      context.go('/lesson/${lesson.id}');
+                                    },
+                                  ),
+                                ],
+
+                                if (controller.loadingMore) ...[
+                                  const SizedBox(height: 12),
+                                  const Center(
+                                    child: SizedBox(
+                                      width: 22,
+                                      height: 22,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: Colors.white,
                                       ),
-                                      const Spacer(),
-                                      _CountPill(count: controller.lessons.where((l) => l.publishStatus == PublishStatus.published).length),
-                                    ],
+                                    ),
                                   ),
-                                  const SizedBox(height: 10),
+                                ],
 
-                                  if (publishedLessons.isEmpty && !controller.loadingMore) ...[
-                                    const _SoftInfo(
-                                      text: 'Chưa có lesson cho bộ lọc hiện tại.',
-                                    ),
-                                  ] else ...[
-                                    _DuolingoPath(
-                                      lessons: publishedLessons,
-                                      onTapLesson: (lesson) {
-                                        AppToast.show(
-                                          context,
-                                          message: 'Open lesson: ${lesson.title}',
-                                          type: AppToastType.success,
-                                        );
-                                      },
-                                    ),
-                                  ],
-
-                                  if (controller.loadingMore) ...[
-                                    const SizedBox(height: 12),
-                                    const Center(
-                                      child: SizedBox(
-                                        width: 22,
-                                        height: 22,
-                                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                                      ),
-                                    ),
-                                  ],
-
-                                  if (!controller.loadingMore &&
-                                      !controller.hasMoreLessons &&
-                                      controller.lessons.isNotEmpty) ...[
-                                    const SizedBox(height: 12),
-                                    const _SoftInfo(text: 'Hết danh sách lesson.'),
-                                  ],
+                                if (!controller.loadingMore &&
+                                    !controller.hasMoreLessons &&
+                                    controller.lessons.isNotEmpty) ...[
+                                  const SizedBox(height: 12),
+                                  const _SoftInfo(
+                                    text: 'Hết danh sách lesson.',
+                                  ),
                                 ],
                               ],
-                            ),
+                            ]),
                           ),
                         ),
                       ],
@@ -344,7 +382,7 @@ class _StartButtonWithBounceState extends State<_StartButtonWithBounce>
             child: FloatingActionButton.small(
               onPressed: widget.onPressed,
               backgroundColor: const Color.fromARGB(255, 255, 255, 255),
-              
+
               child: const Icon(Icons.play_arrow_rounded),
             ),
           );
@@ -368,7 +406,10 @@ class _Blob extends StatelessWidget {
     return Container(
       width: size,
       height: size,
-      decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(size / 2)),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(size / 2),
+      ),
     );
   }
 }
@@ -412,11 +453,21 @@ class _HeroBadge extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text(title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900)),
+          Text(
+            title,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
           const SizedBox(height: 3),
           Text(
             subtitle,
-            style: TextStyle(color: Colors.white.withOpacity(0.9), fontWeight: FontWeight.w700, fontSize: 12),
+            style: TextStyle(
+              color: Colors.white.withOpacity(0.9),
+              fontWeight: FontWeight.w700,
+              fontSize: 12,
+            ),
           ),
         ],
       ),
@@ -435,7 +486,13 @@ class _SectionHeader extends StatelessWidget {
       children: [
         Icon(icon, size: 18, color: Colors.white),
         const SizedBox(width: 8),
-        Text(title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900)),
+        Text(
+          title,
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
       ],
     );
   }
@@ -456,7 +513,10 @@ class _CountPill extends StatelessWidget {
       ),
       child: Text(
         '$count',
-        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900),
+        style: const TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.w900,
+        ),
       ),
     );
   }
@@ -515,7 +575,9 @@ class _ChipsRow<T> extends StatelessWidget {
               selectedColor: Colors.white,
               backgroundColor: Colors.white.withOpacity(0.12),
               shape: StadiumBorder(
-                side: BorderSide(color: Colors.white.withOpacity(selected ? 0.0 : 0.28)),
+                side: BorderSide(
+                  color: Colors.white.withOpacity(selected ? 0.0 : 0.28),
+                ),
               ),
             ),
           );
@@ -556,7 +618,9 @@ class _UnitCards extends StatelessWidget {
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(18),
                 color: selected ? Colors.white : Colors.white.withOpacity(0.14),
-                border: Border.all(color: Colors.white.withOpacity(selected ? 0.0 : 0.22)),
+                border: Border.all(
+                  color: Colors.white.withOpacity(selected ? 0.0 : 0.22),
+                ),
               ),
               child: Row(
                 children: [
@@ -565,7 +629,9 @@ class _UnitCards extends StatelessWidget {
                     height: 42,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: selected ? const Color(0xFF6D28D9) : Colors.white.withOpacity(0.18),
+                      color: selected
+                          ? const Color(0xFF6D28D9)
+                          : Colors.white.withOpacity(0.18),
                     ),
                     child: Icon(
                       Icons.view_agenda_rounded,
@@ -581,7 +647,9 @@ class _UnitCards extends StatelessWidget {
                           u.title,
                           style: TextStyle(
                             fontWeight: FontWeight.w900,
-                            color: selected ? const Color(0xFF111827) : Colors.white,
+                            color: selected
+                                ? const Color(0xFF111827)
+                                : Colors.white,
                           ),
                         ),
                         if ((u.description ?? '').isNotEmpty)
@@ -590,7 +658,11 @@ class _UnitCards extends StatelessWidget {
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
-                              color: (selected ? const Color(0xFF111827) : Colors.white).withOpacity(0.78),
+                              color:
+                                  (selected
+                                          ? const Color(0xFF111827)
+                                          : Colors.white)
+                                      .withOpacity(0.78),
                               fontWeight: FontWeight.w700,
                               fontSize: 12,
                             ),
@@ -599,8 +671,12 @@ class _UnitCards extends StatelessWidget {
                     ),
                   ),
                   Icon(
-                    selected ? Icons.check_circle_rounded : Icons.chevron_right_rounded,
-                    color: selected ? const Color(0xFF6D28D9) : Colors.white.withOpacity(0.9),
+                    selected
+                        ? Icons.check_circle_rounded
+                        : Icons.chevron_right_rounded,
+                    color: selected
+                        ? const Color(0xFF6D28D9)
+                        : Colors.white.withOpacity(0.9),
                   ),
                 ],
               ),
@@ -616,10 +692,7 @@ class _DuolingoPath extends StatelessWidget {
   final List<Lesson> lessons;
   final void Function(Lesson) onTapLesson;
 
-  const _DuolingoPath({
-    required this.lessons,
-    required this.onTapLesson,
-  });
+  const _DuolingoPath({required this.lessons, required this.onTapLesson});
 
   @override
   Widget build(BuildContext context) {
@@ -672,12 +745,14 @@ class _PathNode extends StatelessWidget {
 
     // Node color
     final Color nodeColor = switch (lesson.lessonType) {
-      LessonType.boss => const Color(0xFFFFD166),   // vàng boss
+      LessonType.boss => const Color(0xFFFFD166), // vàng boss
       LessonType.review => const Color(0xFF2DD4BF), // teal review
-      LessonType.standard => Colors.white,          // trắng standard
+      LessonType.standard => Colors.white, // trắng standard
     };
 
-    final Color textOnNode = lesson.lessonType == LessonType.standard ? const Color(0xFF6D28D9) : const Color(0xFF111827);
+    final Color textOnNode = lesson.lessonType == LessonType.standard
+        ? const Color(0xFF6D28D9)
+        : const Color(0xFF111827);
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 14),
@@ -702,7 +777,9 @@ class _PathNode extends StatelessWidget {
             ),
 
           Row(
-            mainAxisAlignment: alignLeft ? MainAxisAlignment.start : MainAxisAlignment.end,
+            mainAxisAlignment: alignLeft
+                ? MainAxisAlignment.start
+                : MainAxisAlignment.end,
             children: [
               InkWell(
                 borderRadius: BorderRadius.circular(22),
@@ -777,7 +854,10 @@ class _PathNode extends StatelessWidget {
                       ),
 
                       const SizedBox(width: 8),
-                      Icon(Icons.chevron_right_rounded, color: Colors.white.withOpacity(0.9)),
+                      Icon(
+                        Icons.chevron_right_rounded,
+                        color: Colors.white.withOpacity(0.9),
+                      ),
                     ],
                   ),
                 ),
@@ -796,13 +876,13 @@ class _SkeletonDuolingo extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     Widget block(double h) => Container(
-          height: h,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(18),
-            color: Colors.white.withOpacity(0.12),
-            border: Border.all(color: Colors.white.withOpacity(0.18)),
-          ),
-        );
+      height: h,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(18),
+        color: Colors.white.withOpacity(0.12),
+        border: Border.all(color: Colors.white.withOpacity(0.18)),
+      ),
+    );
 
     return Column(
       children: [
@@ -836,7 +916,10 @@ class _EmptyState extends StatelessWidget {
             const SizedBox(height: 10),
             const Text(
               'Chưa có dữ liệu curriculum.',
-              style: TextStyle(fontWeight: FontWeight.w900, color: Colors.white),
+              style: TextStyle(
+                fontWeight: FontWeight.w900,
+                color: Colors.white,
+              ),
             ),
             const SizedBox(height: 12),
             FilledButton.icon(
@@ -845,7 +928,9 @@ class _EmptyState extends StatelessWidget {
               label: const Text('Load'),
               style: FilledButton.styleFrom(
                 backgroundColor: const Color.fromARGB(255, 115, 89, 231),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
                 textStyle: const TextStyle(fontWeight: FontWeight.w900),
               ),
             ),
@@ -876,7 +961,10 @@ class _SoftInfo extends StatelessWidget {
           Expanded(
             child: Text(
               text,
-              style: const TextStyle(fontWeight: FontWeight.w800, color: Colors.white),
+              style: const TextStyle(
+                fontWeight: FontWeight.w800,
+                color: Colors.white,
+              ),
             ),
           ),
         ],

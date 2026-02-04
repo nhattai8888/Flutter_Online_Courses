@@ -17,9 +17,13 @@ class SessionStorage {
     return prefs.getString(_tokenKey);
   }
 
-  Future<void> setToken(String token) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_tokenKey, token);
+ Future<void> setTokens({
+    required String accessToken,
+    required String refreshToken,
+  }) async {
+    final sp = await SharedPreferences.getInstance();
+    await sp.setString(_tokenKey, accessToken);
+    await sp.setString(_refreshTokenKey, refreshToken);
   }
 
   Future<String?> getRefreshToken() async {

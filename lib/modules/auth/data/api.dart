@@ -1,9 +1,12 @@
+import 'package:dio/dio.dart';
+
 import '../../../core/network/api_client.dart';
 import '../../../core/types/api_response.dart';
 
 class AuthApi {
+  
   final _client = ApiClient.instance.dio;
-
+  static const _refreshPath = '/auth/refresh';
   static const _loginEmailStartPath = '/auth/login/email';
   static const _loginPhoneStartPath = '/auth/login/phone/start';
   static const _otpVerifyPath = '/auth/otp/verify';
@@ -23,6 +26,22 @@ class AuthApi {
       error: raw,
     );
   }
+
+    Future<ApiResponse<Map<String, dynamic>>> refresh({
+    required String refreshToken,
+  }) async {
+    final res = await _client.post(
+      _refreshPath,
+      data: {
+        'refresh_token': refreshToken,
+      },
+      options: Options(headers: {
+        'content-type': 'application/json',
+      }),
+    );
+    return _wrap((res.data as Map).cast<String, dynamic>());
+  }
+
 
   Future<ApiResponse<Map<String, dynamic>>> loginEmailStart({
     required String email,

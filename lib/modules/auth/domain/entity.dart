@@ -29,7 +29,16 @@ class OtpChallenge {
 
   const OtpChallenge({required this.otpId});
 }
-
+class AuthTokenPair {
+  final String accessToken;
+  final String refreshToken;
+  final String tokenType;
+  const AuthTokenPair({
+    required this.accessToken,
+    required this.refreshToken,
+    required this.tokenType,
+  });
+}
 class AuthLoginResult {
   final AuthTokens? tokens;
   final OtpChallenge? challenge;

@@ -1,9 +1,12 @@
 import 'package:flutter/widgets.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lingougo/modules/lesson/index.dart';
 import 'package:lingougo/modules/vocabulary/routes.dart';
 import '../core/auth/auth_state.dart';
 import '../modules/auth/index.dart';
 import '../modules/curriculum/routes.dart';
+import '../modules/lesson/routes.dart';
+
 import '../modules/tabs/routes.dart';
 import 'main_shell_screen.dart';
 
@@ -21,6 +24,7 @@ class AppRouter {
       ),
       ...authRoutes,
       ...vocabRoutes,
+      ...lessonRoutes,
       ShellRoute(
         builder: (context, state, child) => MainShellScreen(
           child: child,
@@ -29,6 +33,7 @@ class AppRouter {
         routes: [
           ...tabsRoutes,
           ...curriculumRoutes,
+          
         ],
       ),
     ],

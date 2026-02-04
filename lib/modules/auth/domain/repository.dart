@@ -10,6 +10,10 @@ abstract class AuthRepository {
     required String deviceFingerprint,
   });
 
+   Future<AuthTokenPair> refresh(String refreshToken);
+
+  
+
   /// Phone login start: POST /auth/login/phone/start
   /// Returns otpId for OTP flow.
   Future<OtpChallenge> loginPhoneStart({
@@ -31,4 +35,5 @@ abstract class AuthRepository {
 
   /// Endpoint not specified (keep stub)
   Future<void> forgotPassword({required String identifier});
+  
 }

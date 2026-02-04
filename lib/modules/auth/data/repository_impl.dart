@@ -16,6 +16,22 @@ class AuthRepositoryImpl implements AuthRepository {
     );
   }
 
+   @override
+  Future<AuthTokenPair> refresh(String refreshToken) async {
+    final res = await api.refresh(refreshToken: refreshToken);
+    final data = unwrap<Map<String, dynamic>>(res);
+
+    // Backend sample:
+    // { code:200, data:{ access_token, refresh_token, token_type }, message:"OK" }
+    final inner = (data['data'] is Map) ? (data['data'] as Map).cast<String, dynamic>() : data;
+
+    return AuthTokenPair(
+      accessToken: inner['access_token'] as String,
+      refreshToken: inner['refresh_token'] as String,
+      tokenType: (inner['token_type'] as String?) ?? 'bearer',
+    );
+  }
+
   @override
   Future<AuthLoginResult> loginEmailStart({
     required String email,

@@ -1,5 +1,14 @@
 import 'entity.dart';
 import 'repository.dart';
+class RefreshTokenUseCase {
+  final AuthRepository repo;
+  RefreshTokenUseCase(this.repo);
+
+  Future<AuthTokenPair> call(String refreshToken) {
+    return repo.refresh(refreshToken);
+  }
+}
+
 
 class LoginEmailStartUseCase {
   final AuthRepository repository;

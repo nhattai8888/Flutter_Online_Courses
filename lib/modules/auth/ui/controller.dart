@@ -328,10 +328,12 @@ class AuthController extends ChangeNotifier {
   }
 
   Future<void> _applyTokensAndLoadMe(AuthTokens tokens) async {
-    await SessionStorage.instance.setToken(tokens.accessToken);
-    await SessionStorage.instance.setRefreshToken(tokens.refreshToken);
+    await SessionStorage.instance.setTokens(
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+    );
 
-    AuthState.instance.setToken(tokens.accessToken);
+    AuthState.instance.setToken(accessToken: tokens.accessToken, refreshToken: tokens.refreshToken);
 
     final me = await getMeUseCase.call();
     AuthState.instance.setPermissions(me.permissions);

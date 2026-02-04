@@ -6,18 +6,25 @@ class AuthState extends ChangeNotifier {
   static final AuthState instance = AuthState._internal();
 
   String? _token;
+  String? _refreshToken;
   List<String> _permissions = [];
 
   String? get token => _token;
+  String? get refreshToken => _refreshToken;
   List<String> get permissions => List.unmodifiable(_permissions);
 
-  void setToken(String token) {
-    _token = token;
+  void setToken({
+    required String accessToken,
+    required String refreshToken,
+  }) {
+    _token = accessToken;
+    _refreshToken = refreshToken;
     notifyListeners();
   }
 
   void clear() {
     _token = null;
+    _refreshToken = null;
     _permissions = [];
     notifyListeners();
   }
