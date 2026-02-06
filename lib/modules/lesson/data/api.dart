@@ -1,53 +1,45 @@
 import '../../../core/network/api_client.dart';
-import '../../../core/types/api_response.dart';
 
 class LessonApi {
-  final _dio = ApiClient.instance.dio;
+  LessonApi({ApiClient? client}) : _client = client ?? ApiClient.instance;
 
-  // --- Paths (lesson-engine) ---
-  static const String _itemsByLesson = '/lesson-engine/items/by-lesson';
-  static const String _attemptStart = '/lesson-engine/lessons';
-  static const String _attempts = '/lesson-engine/attempts';
+  final ApiClient _client;
 
-  ApiResponse<dynamic> _wrap(dynamic raw) {
-    final map = (raw as Map).cast<String, dynamic>();
-    final code = map['code'];
-    final ok = code == 200;
-    return ApiResponse<dynamic>(
-      status: ok ? 'success' : 'error',
-      data: map['data'],
-      message: map['message'] as String?,
-      error: map,
-    );
+  static String itemsByLessonPath(String lessonId) => '/lesson-engine/items/by-lesson/$lessonId';
+  static String startAttemptPath(String lessonId) => '/lesson-engine/lessons/$lessonId/attempts/start';
+  static String submitAttemptPath({
+  required String lessonId,
+  required String attemptId,
+}) =>
+  '/lesson-engine/lessons/$lessonId/attempts/$attemptId/submit';
+
+
+  Future<Map<String, dynamic>> getItemsByLesson(String lessonId) async {
+    final res = await _client.dio.get(itemsByLessonPath(lessonId));
+    return (res.data as Map).cast<String, dynamic>();
   }
 
-  Future<ApiResponse<dynamic>> listItemsByLesson(String lessonId) async {
-    final res = await _dio.get('$_itemsByLesson/$lessonId');
-    return _wrap(res.data);
+  Future<Map<String, dynamic>> startAttempt(String lessonId) async {
+    final res = await _client.dio.post(startAttemptPath(lessonId));
+    return (res.data as Map).cast<String, dynamic>();
   }
 
-  Future<ApiResponse<dynamic>> startAttempt(String lessonId) async {
-    final res = await _dio.post('$_attemptStart/$lessonId/attempts/start');
-    return _wrap(res.data);
-  }
-
-  Future<ApiResponse<dynamic>> submitAttempt({
-    required String attemptId,
-    required Map<String, dynamic> answers,
-    int durationSec = 0,
-  }) async {
-    final res = await _dio.post(
-      '$_attempts/$attemptId/submit',
-      data: {
-        'answers': answers,
-        'duration_sec': durationSec,
-      },
-    );
-    return _wrap(res.data);
-  }
-
-  Future<ApiResponse<dynamic>> getAttempt(String attemptId) async {
-    final res = await _dio.get('$_attempts/$attemptId');
-    return _wrap(res.data);
-  }
+Future<Map<String, dynamic>> submitAttempt({
+  required String lessonId,
+  required String attemptId,
+  required Map<String, dynamic> answers,
+  required int durationSec,
+}) async {
+  final res = await _client.dio.post(
+    submitAttemptPath(
+      lessonId: lessonId,
+      attemptId: attemptId,
+    ),
+    data: {
+      'answers': answers,
+      'duration_sec': durationSec,
+    },
+  );
+  return (res.data as Map).cast<String, dynamic>();
+}
 }

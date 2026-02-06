@@ -1,7 +1,91 @@
+
+enum LessonItemType {
+  mcq,
+  cloze,
+  match,
+  reorder,
+  listen,
+  speak,
+  dialogue,
+  recorder,
+  other;
+
+  static LessonItemType fromApi(String raw) {
+    switch (raw.toUpperCase()) {
+      case 'MCQ':
+        return LessonItemType.mcq;
+      case 'CLOZE':
+        return LessonItemType.cloze;
+      case 'MATCH':
+        return LessonItemType.match;
+      case 'REORDER':
+        return LessonItemType.reorder;
+      case 'LISTEN':
+        return LessonItemType.listen;
+      case 'SPEAK':
+        return LessonItemType.speak;
+      case 'DIALOGUE':
+        return LessonItemType.dialogue;
+      case 'RECORDER':
+        return LessonItemType.recorder;
+      default:
+        return LessonItemType.other;
+    }
+  }
+
+  String get apiValue {
+    switch (this) {
+      case LessonItemType.mcq:
+        return 'MCQ';
+      case LessonItemType.cloze:
+        return 'CLOZE';
+      case LessonItemType.match:
+        return 'MATCH';
+      case LessonItemType.reorder:
+        return 'REORDER';
+      case LessonItemType.listen:
+        return 'LISTEN';
+      case LessonItemType.speak:
+        return 'SPEAK';
+      case LessonItemType.dialogue:
+        return 'DIALOGUE';
+      case LessonItemType.recorder:
+        return 'RECORDER';
+      case LessonItemType.other:
+        return 'OTHER';
+    }
+  }
+}
+
+enum AttemptStatus {
+  started,
+  submitted,
+  pendingAi,
+  scored,
+  failed;
+
+  static AttemptStatus fromApi(String raw) {
+    switch (raw.toUpperCase()) {
+      case 'STARTED':
+        return AttemptStatus.started;
+      case 'SUBMITTED':
+        return AttemptStatus.submitted;
+      case 'PENDING_AI':
+        return AttemptStatus.pendingAi;
+      case 'SCORED':
+        return AttemptStatus.scored;
+      case 'FAILED':
+        return AttemptStatus.failed;
+      default:
+        return AttemptStatus.failed;
+    }
+  }
+}
+
 class LessonChoice {
   final String key;
   final String text;
-  final bool isCorrect; // server usually false for security
+  final bool isCorrect; // usually false in attempt start response (security)
   final int sortOrder;
 
   const LessonChoice({
@@ -15,7 +99,7 @@ class LessonChoice {
 class LessonItem {
   final String id;
   final String lessonId;
-  final String itemType; // MCQ | CLOZE | MATCH | REORDER | LISTEN | SPEAK
+  final LessonItemType itemType;
   final String? prompt;
   final Map<String, dynamic>? content;
   final Map<String, dynamic>? correctAnswer;
@@ -66,7 +150,7 @@ class ItemResult {
 
 class AttemptSubmitResponse {
   final String attemptId;
-  final String status; // STARTED | SUBMITTED | PENDING_AI | SCORED | FAILED
+  final AttemptStatus status;
   final int scorePoints;
   final int maxPoints;
   final int scorePercent;
@@ -79,35 +163,5 @@ class AttemptSubmitResponse {
     required this.maxPoints,
     required this.scorePercent,
     required this.results,
-  });
-}
-
-class AttemptOut {
-  final String id;
-  final String userId;
-  final String lessonId;
-  final String status;
-  final DateTime? startedAt;
-  final DateTime? submittedAt;
-  final int scorePoints;
-  final int maxPoints;
-  final int scorePercent;
-  final int durationSec;
-  final Map<String, dynamic>? answers;
-  final Map<String, dynamic>? resultBreakdown;
-
-  const AttemptOut({
-    required this.id,
-    required this.userId,
-    required this.lessonId,
-    required this.status,
-    required this.startedAt,
-    required this.submittedAt,
-    required this.scorePoints,
-    required this.maxPoints,
-    required this.scorePercent,
-    required this.durationSec,
-    required this.answers,
-    required this.resultBreakdown,
   });
 }

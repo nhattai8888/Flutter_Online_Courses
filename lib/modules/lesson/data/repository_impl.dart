@@ -1,146 +1,189 @@
-import '../../../core/types/api_response.dart';
 import '../../../core/types/app_error.dart';
 import '../domain/entity.dart';
 import '../domain/repository.dart';
 import 'api.dart';
 
 class LessonRepositoryImpl implements LessonRepository {
-  final LessonApi _api;
-  LessonRepositoryImpl(this._api);
+  final LessonApi api;
+  LessonRepositoryImpl(this.api);
 
-  T _unwrap<T>(ApiResponse<dynamic> res, T Function(dynamic data) mapper) {
-    if (res.status != 'success') {
-      throw AppError(
-        code: 'API_ERROR',
-        message: res.message ?? 'Request failed',
-        status: null,
-        raw: res.error,
-      );
+  Map<String, dynamic> _unwrapEnvelope(Map<String, dynamic> json) {
+    // Support BOTH shapes:
+    // A) {status:"success", data:..., message, error}
+    // B) {code:200, data:..., message}
+    if (json.containsKey('status')) {
+      final status = (json['status'] as String?) ?? 'error';
+      if (status != 'success') {
+        throw AppError(
+          code: 'API_ERROR',
+          message: (json['message'] as String?) ?? 'Request failed',
+          status: null,
+          raw: json['error'],
+        );
+      }
+      final data = json['data'];
+      if (data is Map<String, dynamic>) return data;
+      if (data is Map) return data.cast<String, dynamic>();
+      if (data == null) return <String, dynamic>{};
+      return <String, dynamic>{'data': data};
     }
-    return mapper(res.data);
+
+    final code = json['code'];
+    if (code is int && code >= 200 && code < 300) {
+      final data = json['data'];
+      if (data is Map<String, dynamic>) return data;
+      if (data is Map) return data.cast<String, dynamic>();
+      if (data == null) return <String, dynamic>{};
+      return <String, dynamic>{'data': data};
+    }
+
+    throw AppError(
+      code: 'API_ERROR',
+      message: (json['message'] as String?) ?? 'Request failed',
+      status: code is int ? code : null,
+      raw: json,
+    );
   }
 
-  DateTime? _dt(dynamic v) {
-    if (v == null) return null;
-    try {
-      return DateTime.parse(v.toString());
-    } catch (_) {
-      return null;
-    }
-  }
-
-  LessonChoice _choiceFromMap(Map<String, dynamic> m) {
+  LessonChoice _mapChoice(Map<String, dynamic> m) {
     return LessonChoice(
       key: (m['key'] ?? '').toString(),
       text: (m['text'] ?? '').toString(),
-      isCorrect: (m['is_correct'] is bool) ? (m['is_correct'] as bool) : false,
-      sortOrder: (m['sort_order'] is int) ? (m['sort_order'] as int) : int.tryParse('${m['sort_order']}') ?? 0,
+      isCorrect: (m['is_correct'] as bool?) ?? false,
+      sortOrder: (m['sort_order'] as int?) ?? 0,
     );
   }
 
-  LessonItem _itemFromMap(Map<String, dynamic> m) {
-    final rawChoices = (m['choices'] as List?) ?? const [];
-    final choices = rawChoices
-        .whereType<Map>()
-        .map((e) => _choiceFromMap((e as Map).cast<String, dynamic>()))
-        .toList(growable: false);
+  LessonItem _mapItem(Map<String, dynamic> m) {
+    final id = (m['id'] ?? '').toString();
+    final lessonId = (m['lesson_id'] ?? '').toString();
+    final typeRaw = (m['item_type'] ?? '').toString();
+
+    final choicesAny = m['choices'];
+    final choices = <LessonChoice>[];
+    if (choicesAny is List) {
+      for (final c in choicesAny) {
+        if (c is Map) choices.add(_mapChoice(c.cast<String, dynamic>()));
+      }
+      choices.sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+    }
+
+    Map<String, dynamic>? content;
+    final contentAny = m['content'];
+    if (contentAny is Map) content = contentAny.cast<String, dynamic>();
+
+    Map<String, dynamic>? correct;
+    final correctAny = m['correct_answer'];
+    if (correctAny is Map) correct = correctAny.cast<String, dynamic>();
 
     return LessonItem(
-      id: (m['id'] ?? '').toString(),
-      lessonId: (m['lesson_id'] ?? '').toString(),
-      itemType: (m['item_type'] ?? '').toString(),
-      prompt: m['prompt']?.toString(),
-      content: (m['content'] is Map) ? (m['content'] as Map).cast<String, dynamic>() : null,
-      correctAnswer: (m['correct_answer'] is Map) ? (m['correct_answer'] as Map).cast<String, dynamic>() : null,
-      points: (m['points'] is int) ? (m['points'] as int) : int.tryParse('${m['points']}') ?? 1,
-      sortOrder: (m['sort_order'] is int) ? (m['sort_order'] as int) : int.tryParse('${m['sort_order']}') ?? 0,
+      id: id,
+      lessonId: lessonId,
+      itemType: LessonItemType.fromApi(typeRaw),
+      prompt: (m['prompt'] as String?),
+      content: content,
+      correctAnswer: correct,
+      points: (m['points'] as int?) ?? 1,
+      sortOrder: (m['sort_order'] as int?) ?? 0,
       choices: choices,
-    );
-  }
-
-  ItemResult _resultFromMap(Map<String, dynamic> m) {
-    return ItemResult(
-      itemId: (m['item_id'] ?? '').toString(),
-      isCorrect: (m['is_correct'] is bool) ? (m['is_correct'] as bool) : false,
-      earnedPoints: (m['earned_points'] is int) ? (m['earned_points'] as int) : int.tryParse('${m['earned_points']}') ?? 0,
-      maxPoints: (m['max_points'] is int) ? (m['max_points'] as int) : int.tryParse('${m['max_points']}') ?? 0,
-      detail: (m['detail'] is Map) ? (m['detail'] as Map).cast<String, dynamic>() : null,
-    );
-  }
-
-  AttemptOut _attemptOutFromMap(Map<String, dynamic> m) {
-    return AttemptOut(
-      id: (m['id'] ?? '').toString(),
-      userId: (m['user_id'] ?? '').toString(),
-      lessonId: (m['lesson_id'] ?? '').toString(),
-      status: (m['status'] ?? '').toString(),
-      startedAt: _dt(m['started_at']),
-      submittedAt: _dt(m['submitted_at']),
-      scorePoints: (m['score_points'] is int) ? (m['score_points'] as int) : int.tryParse('${m['score_points']}') ?? 0,
-      maxPoints: (m['max_points'] is int) ? (m['max_points'] as int) : int.tryParse('${m['max_points']}') ?? 0,
-      scorePercent: (m['score_percent'] is int) ? (m['score_percent'] as int) : int.tryParse('${m['score_percent']}') ?? 0,
-      durationSec: (m['duration_sec'] is int) ? (m['duration_sec'] as int) : int.tryParse('${m['duration_sec']}') ?? 0,
-      answers: (m['answers'] is Map) ? (m['answers'] as Map).cast<String, dynamic>() : null,
-      resultBreakdown: (m['result_breakdown'] is Map) ? (m['result_breakdown'] as Map).cast<String, dynamic>() : null,
     );
   }
 
   @override
   Future<List<LessonItem>> listItemsByLesson(String lessonId) async {
-    final res = await _api.listItemsByLesson(lessonId);
-    return _unwrap<List<LessonItem>>(res, (data) {
-      final list = (data as List?) ?? const [];
-      return list
-          .whereType<Map>()
-          .map((e) => _itemFromMap((e as Map).cast<String, dynamic>()))
-          .toList(growable: false);
-    });
+    final json = await api.getItemsByLesson(lessonId);
+    final data = _unwrapEnvelope(json);
+
+    // expected: {items: [...] } OR directly a list
+    final itemsAny = data['items'] ?? data['data'] ?? data['results'] ?? data;
+    final list = <LessonItem>[];
+
+    if (itemsAny is List) {
+      for (final x in itemsAny) {
+        if (x is Map) list.add(_mapItem(x.cast<String, dynamic>()));
+      }
+    } else if (itemsAny is Map && itemsAny['items'] is List) {
+      for (final x in (itemsAny['items'] as List)) {
+        if (x is Map) list.add(_mapItem(x.cast<String, dynamic>()));
+      }
+    }
+
+    list.sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+    return list;
   }
 
   @override
-  Future<AttemptStartResponse> startAttempt(String lessonId) async {
-    final res = await _api.startAttempt(lessonId);
-    return _unwrap<AttemptStartResponse>(res, (data) {
-      final m = (data as Map).cast<String, dynamic>();
-      final items = (m['items'] as List?) ?? const [];
-      return AttemptStartResponse(
-        attemptId: (m['attempt_id'] ?? '').toString(),
-        lessonId: (m['lesson_id'] ?? lessonId).toString(),
-        items: items
-            .whereType<Map>()
-            .map((e) => _itemFromMap((e as Map).cast<String, dynamic>()))
-            .toList(growable: false),
-      );
-    });
+  Future<AttemptStartResponse> startLessonAttempt(String lessonId) async {
+    final json = await api.startAttempt(lessonId);
+    final data = _unwrapEnvelope(json);
+
+    final attemptId = (data['attempt_id'] ?? '').toString();
+    final lId = (data['lesson_id'] ?? lessonId).toString();
+
+    final itemsAny = data['items'];
+    final items = <LessonItem>[];
+    if (itemsAny is List) {
+      for (final x in itemsAny) {
+        if (x is Map) items.add(_mapItem(x.cast<String, dynamic>()));
+      }
+    }
+    items.sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+
+    return AttemptStartResponse(
+      attemptId: attemptId,
+      lessonId: lId,
+      items: items,
+    );
   }
 
   @override
-  Future<AttemptSubmitResponse> submitAttempt({
+  Future<AttemptSubmitResponse> submitLessonAttempt({
+    required String lessonId,
     required String attemptId,
     required Map<String, dynamic> answers,
-    int durationSec = 0,
+    required int durationSec,
   }) async {
-    final res = await _api.submitAttempt(attemptId: attemptId, answers: answers, durationSec: durationSec);
-    return _unwrap<AttemptSubmitResponse>(res, (data) {
-      final m = (data as Map).cast<String, dynamic>();
-      final results = (m['results'] as List?) ?? const [];
-      return AttemptSubmitResponse(
-        attemptId: (m['attempt_id'] ?? attemptId).toString(),
-        status: (m['status'] ?? '').toString(),
-        scorePoints: (m['score_points'] is int) ? (m['score_points'] as int) : int.tryParse('${m['score_points']}') ?? 0,
-        maxPoints: (m['max_points'] is int) ? (m['max_points'] as int) : int.tryParse('${m['max_points']}') ?? 0,
-        scorePercent: (m['score_percent'] is int) ? (m['score_percent'] as int) : int.tryParse('${m['score_percent']}') ?? 0,
-        results: results
-            .whereType<Map>()
-            .map((e) => _resultFromMap((e as Map).cast<String, dynamic>()))
-            .toList(growable: false),
-      );
-    });
-  }
+    final json = await api.submitAttempt(
+  lessonId: lessonId,
+  attemptId: attemptId,
+  answers: answers,
+  durationSec: durationSec,
+);
 
-  @override
-  Future<AttemptOut> getAttempt(String attemptId) async {
-    final res = await _api.getAttempt(attemptId);
-    return _unwrap<AttemptOut>(res, (data) => _attemptOutFromMap((data as Map).cast<String, dynamic>()));
+    final data = _unwrapEnvelope(json);
+
+    final status = AttemptStatus.fromApi((data['status'] ?? 'FAILED').toString());
+    final scorePoints = (data['score_points'] as int?) ?? 0;
+    final maxPoints = (data['max_points'] as int?) ?? 0;
+    final scorePercent = (data['score_percent'] as int?) ?? 0;
+
+    final resultsAny = data['results'];
+    final results = <ItemResult>[];
+    if (resultsAny is List) {
+      for (final r in resultsAny) {
+        if (r is! Map) continue;
+        final m = r.cast<String, dynamic>();
+        Map<String, dynamic>? detail;
+        final d = m['detail'];
+        if (d is Map) detail = d.cast<String, dynamic>();
+
+        results.add(ItemResult(
+          itemId: (m['item_id'] ?? '').toString(),
+          isCorrect: (m['is_correct'] as bool?) ?? false,
+          earnedPoints: (m['earned_points'] as int?) ?? 0,
+          maxPoints: (m['max_points'] as int?) ?? 0,
+          detail: detail,
+        ));
+      }
+    }
+
+    return AttemptSubmitResponse(
+      attemptId: attemptId,
+      status: status,
+      scorePoints: scorePoints,
+      maxPoints: maxPoints,
+      scorePercent: scorePercent,
+      results: results,
+    );
   }
 }

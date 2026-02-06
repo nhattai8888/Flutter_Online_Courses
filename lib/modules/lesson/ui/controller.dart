@@ -4,50 +4,68 @@ import '../../../core/types/app_error.dart';
 import '../domain/entity.dart';
 import '../domain/usecases.dart';
 
-enum LessonUiPhase {
-  preview, // grouped skill tiles
-  loading, // generic loading
-  practicing, // doing items of a selected type
-  submitting, // submitting attempt
-  completed, // result screen
+enum LessonMvpPhase {
+  loadingPreview,
+  preview,
+  loadingAttempt,
+  practicing,
+  submitting,
+  completed, // final or optimistic
   error,
+}
+
+enum CheckState {
+  idle,
+  checked,
 }
 
 class LessonController extends ChangeNotifier {
   final ListItemsByLessonUseCase listItemsByLesson;
   final StartLessonAttemptUseCase startAttempt;
   final SubmitLessonAttemptUseCase submitAttempt;
-  final GetAttemptUseCase? getAttempt; // optional future use
 
   LessonController({
     required this.listItemsByLesson,
     required this.startAttempt,
     required this.submitAttempt,
-    this.getAttempt,
   });
 
-  LessonUiPhase _phase = LessonUiPhase.preview;
-  LessonUiPhase get phase => _phase;
+  LessonMvpPhase _phase = LessonMvpPhase.loadingPreview;
+  LessonMvpPhase get phase => _phase;
 
   String? _error;
   String? get error => _error;
 
-  String? lessonId;
+  String lessonId = '';
 
-  // Preview data
+  // Preview items (counts/type tiles)
   List<LessonItem> previewItems = const [];
 
-  // Attempt data
+  // Attempt (single attempt for whole lesson)
   AttemptStartResponse? attempt;
-  AttemptSubmitResponse? result;
 
-  // UX state
-  String? activeType;
+  // Practice selection
+  LessonItemType? activeType;
   List<LessonItem> activeItems = const [];
   int activeIndex = 0;
 
-  // answers[itemId] = {answer, meta}
-  final Map<String, Map<String, dynamic>> answers = <String, Map<String, dynamic>>{};
+  // per item state
+  CheckState checkState = CheckState.idle;
+
+  // answers[item_id] = {answer, meta}
+  final Map<String, Map<String, dynamic>> answers = {};
+
+  // Type completion
+  final Set<LessonItemType> completedTypes = <LessonItemType>{};
+
+  // Submit result
+  AttemptSubmitResponse? submitResult;
+
+  // Optimistic submit UI state
+  bool isOptimisticSubmitting = false;
+  String? optimisticMessage; // e.g. "Đang chấm điểm…"
+  String? optimisticError;   // show retry
+
   final Stopwatch _sw = Stopwatch();
 
   Future<void> init(String lessonId) async {
@@ -56,85 +74,105 @@ class LessonController extends ChangeNotifier {
   }
 
   Future<void> loadPreview() async {
-    final id = lessonId;
-    if (id == null || id.isEmpty) return;
-
-    _setPhase(LessonUiPhase.loading);
+    _setPhase(LessonMvpPhase.loadingPreview);
     try {
-      previewItems = await listItemsByLesson.call(id);
-      // stay in preview until user selects a type
+      previewItems = await listItemsByLesson.call(lessonId);
+      previewItems = List<LessonItem>.from(previewItems)
+        ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+
+      attempt = null;
       activeType = null;
       activeItems = const [];
       activeIndex = 0;
-      result = null;
-      attempt = null;
+      checkState = CheckState.idle;
       answers.clear();
+      completedTypes.clear();
+
+      submitResult = null;
+      isOptimisticSubmitting = false;
+      optimisticMessage = null;
+      optimisticError = null;
+
       _sw.reset();
-      _setPhase(LessonUiPhase.preview);
+      _setPhase(LessonMvpPhase.preview);
     } catch (e) {
       _setError(_friendlyError(e));
     }
   }
 
-  Map<String, List<LessonItem>> groupPreviewByType() {
-    final Map<String, List<LessonItem>> map = {};
+  Map<LessonItemType, List<LessonItem>> groupPreviewByType() {
+    final Map<LessonItemType, List<LessonItem>> map = {};
     for (final it in previewItems) {
       map.putIfAbsent(it.itemType, () => <LessonItem>[]).add(it);
+    }
+    for (final e in map.entries) {
+      e.value.sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
     }
     return map;
   }
 
-  Future<void> startType(String type) async {
-    final id = lessonId;
-    if (id == null || id.isEmpty) return;
+  bool get hasAttempt => attempt != null;
 
-    activeType = type;
-    activeIndex = 0;
-    activeItems = const [];
-    answers.clear();
-    result = null;
+  Future<void> _ensureAttemptStarted() async {
+    if (attempt != null) return;
 
-    _setPhase(LessonUiPhase.loading);
-
+    _setPhase(LessonMvpPhase.loadingAttempt);
     try {
-      attempt = await startAttempt.call(id);
-
-      final items = attempt!.items.where((x) => x.itemType == type).toList(growable: false);
-      activeItems = items;
+      final res = await startAttempt.call(lessonId);
+      attempt = AttemptStartResponse(
+        attemptId: res.attemptId,
+        lessonId: res.lessonId,
+        items: List<LessonItem>.from(res.items)
+          ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder)),
+      );
 
       _sw
         ..reset()
         ..start();
 
-      _setPhase(LessonUiPhase.practicing);
+      _setPhase(LessonMvpPhase.preview);
     } catch (e) {
       _setError(_friendlyError(e));
     }
   }
 
+  Future<void> startType(LessonItemType type) async {
+    await _ensureAttemptStarted();
+    if (attempt == null) return;
+
+    activeType = type;
+    activeIndex = 0;
+    checkState = CheckState.idle;
+
+    final items = attempt!.items.where((x) => x.itemType == type).toList(growable: false);
+    activeItems = items;
+
+    _setPhase(LessonMvpPhase.practicing);
+  }
+
   LessonItem? get currentItem {
-    if (_phase != LessonUiPhase.practicing) return null;
+    if (_phase != LessonMvpPhase.practicing) return null;
     if (activeItems.isEmpty) return null;
     if (activeIndex < 0 || activeIndex >= activeItems.length) return null;
     return activeItems[activeIndex];
   }
 
-  int get totalActive => activeItems.length;
-
-  double get progress {
-    if (totalActive == 0) return 0;
-    // progress based on position (0..1)
-    return (activeIndex / totalActive).clamp(0, 1);
+  double get activeProgress {
+    if (activeItems.isEmpty) return 0;
+    return ((activeIndex + 1) / activeItems.length).clamp(0, 1);
   }
 
   bool get canCheck {
     final it = currentItem;
     if (it == null) return false;
-    final ans = answers[it.id];
-    return ans != null && ans.isNotEmpty;
+    final v = answers[it.id];
+    return v != null && v.isNotEmpty && checkState == CheckState.idle;
   }
 
+  bool get canContinue => checkState == CheckState.checked;
+
   void setAnswer(String itemId, dynamic answer, {Map<String, dynamic>? meta}) {
+    // Backend expects: answers: Dict[item_id] -> {answer, meta}
     answers[itemId] = <String, dynamic>{
       'answer': answer,
       if (meta != null) 'meta': meta,
@@ -142,77 +180,127 @@ class LessonController extends ChangeNotifier {
     notifyListeners();
   }
 
-  void next() {
-    if (_phase != LessonUiPhase.practicing) return;
-    if (activeIndex < totalActive - 1) {
+  Map<String, dynamic>? getAnswerEntry(String itemId) => answers[itemId];
+
+  void markItemSkipped(String itemId, {String? reason}) {
+    answers[itemId] = <String, dynamic>{
+      'answer': null,
+      'meta': <String, dynamic>{
+        'skipped': true,
+        if (reason != null) 'reason': reason,
+      },
+    };
+    notifyListeners();
+  }
+
+  void onCheck() {
+    if (!canCheck) return;
+    checkState = CheckState.checked;
+    notifyListeners();
+  }
+
+  void onContinue() {
+    if (!canContinue) return;
+
+    checkState = CheckState.idle;
+
+    if (activeIndex < activeItems.length - 1) {
       activeIndex += 1;
       notifyListeners();
-    } else {
-      // reached end of this type -> submit whole attempt answers (only those user answered)
-      submitCurrentAttempt();
+      return;
     }
-  }
 
-  void prev() {
-    if (_phase != LessonUiPhase.practicing) return;
-    if (activeIndex > 0) {
-      activeIndex -= 1;
-      notifyListeners();
-    }
-  }
+    final t = activeType;
+    if (t != null) completedTypes.add(t);
 
-  Future<void> submitCurrentAttempt() async {
-    final a = attempt;
-    if (a == null) return;
+    activeType = null;
+    activeItems = const [];
+    activeIndex = 0;
 
-    _setPhase(LessonUiPhase.submitting);
-
-    try {
-      _sw.stop();
-
-      final payload = <String, dynamic>{};
-      for (final e in answers.entries) {
-        payload[e.key] = e.value;
-      }
-
-      result = await submitAttempt.call(
-        attemptId: a.attemptId,
-        answers: payload,
-        durationSec: _sw.elapsed.inSeconds,
-      );
-
-      _setPhase(LessonUiPhase.completed);
-    } catch (e) {
-      _setError(_friendlyError(e));
-    }
+    _setPhase(LessonMvpPhase.preview);
   }
 
   void backToPreview() {
     activeType = null;
     activeItems = const [];
     activeIndex = 0;
-    attempt = null;
-    result = null;
-    answers.clear();
-    _sw.reset();
-    _error = null;
-    _setPhase(LessonUiPhase.preview);
+    checkState = CheckState.idle;
+    _setPhase(LessonMvpPhase.preview);
   }
 
-  void clearError() {
-    _error = null;
-    if (_phase == LessonUiPhase.error) _setPhase(LessonUiPhase.preview);
+  bool get allTypesCompleted {
+    final grouped = groupPreviewByType();
+    if (grouped.isEmpty) return false;
+    final types = grouped.keys.toSet();
+    return completedTypes.containsAll(types);
+  }
+
+  Future<void> submitWholeLessonOptimistic() async {
+    final a = attempt;
+    if (a == null) return;
+
+    // optimistic UI: show Completed screen immediately with spinner
+    isOptimisticSubmitting = true;
+    optimisticMessage = 'Đang chấm điểm…';
+    optimisticError = null;
+    submitResult = null;
+    _phase = LessonMvpPhase.completed;
     notifyListeners();
+
+    try {
+      _sw.stop();
+
+      // Ensure every item has an entry (allow skipped)
+      for (final it in a.items) {
+        answers.putIfAbsent(
+          it.id,
+          () => <String, dynamic>{
+            'answer': null,
+            'meta': <String, dynamic>{'skipped': true},
+          },
+        );
+      }
+
+      final payload = <String, dynamic>{};
+      for (final e in answers.entries) {
+        payload[e.key] = e.value;
+      }
+
+      // IMPORTANT: Backend schema
+      // AttemptSubmitRequest: { answers: Dict[str, AnswerPayload], duration_sec: int }
+      final res = await submitAttempt.call(
+        lessonId: lessonId,
+        attemptId: a.attemptId,
+        answers: payload,
+        durationSec: _sw.elapsed.inSeconds,
+      );
+
+      submitResult = res;
+      isOptimisticSubmitting = false;
+      optimisticMessage = null;
+      optimisticError = null;
+      notifyListeners();
+    } catch (e) {
+      isOptimisticSubmitting = false;
+      optimisticMessage = null;
+      optimisticError = _friendlyError(e);
+      notifyListeners();
+    }
   }
 
-  void _setPhase(LessonUiPhase p) {
+  Future<void> retrySubmit() async {
+    if (attempt == null) return;
+    await submitWholeLessonOptimistic();
+  }
+
+  void _setPhase(LessonMvpPhase p) {
     _phase = p;
     _error = null;
     notifyListeners();
   }
 
   void _setError(String msg) {
-    _phase = LessonUiPhase.error;
+    _phase = LessonMvpPhase.error;
     _error = msg;
     notifyListeners();
   }
