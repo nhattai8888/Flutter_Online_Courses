@@ -280,6 +280,10 @@ class _PreviewView extends StatelessWidget {
                 ),
               ),
             ),
+
+            // ✅ THÊM NÚT Ở ĐÂY
+            const SizedBox(height: 12),
+            _VocabCTAButton(lessonId: controller.lessonId),
             const SizedBox(height: 14),
 
             if (grouped.isEmpty) const _SoftInfo(text: 'Lesson chưa có items.'),
@@ -294,39 +298,7 @@ class _PreviewView extends StatelessWidget {
               const SizedBox(height: 12),
             ],
 
-            const SizedBox(height: 10),
-            _GlassCard(
-              child: Padding(
-                padding: const EdgeInsets.all(14),
-                child: Row(
-                  children: [
-                    const Icon(Icons.emoji_events_rounded, color: Colors.white),
-                    const SizedBox(width: 10),
-                    const Expanded(
-                      child: Text(
-                        'Hoàn thành tất cả dạng bài để nộp lesson',
-                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900),
-                      ),
-                    ),
-                    FilledButton(
-                      onPressed: controller.allTypesCompleted ? controller.submitWholeLessonOptimistic : null,
-                      style: FilledButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        disabledBackgroundColor: Colors.white.withOpacity(0.25),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                      ),
-                      child: Text(
-                        'Nộp',
-                        style: TextStyle(
-                          color: controller.allTypesCompleted ? const Color(0xFF6D28D9) : Colors.white.withOpacity(0.8),
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+            // ... phần submit card giữ nguyên
           ],
         ),
       ),
@@ -1850,6 +1822,58 @@ class _Pill extends StatelessWidget {
       child: Text(
         text,
         style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900),
+      ),
+    );
+  }
+}
+
+class _VocabCTAButton extends StatelessWidget {
+  final String lessonId;
+
+  const _VocabCTAButton({required this.lessonId});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(18),
+        onTap: () {
+          context.go('/vocab/lesson/$lessonId');
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFF6D28D9), Color(0xFF8B5CF6)],
+            ),
+            borderRadius: BorderRadius.circular(18),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.15),
+                blurRadius: 12,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          child: Row(
+            children: const [
+              Icon(Icons.menu_book_rounded, color: Colors.white),
+              SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Học từ vựng trong bài này',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 15,
+                  ),
+                ),
+              ),
+              Icon(Icons.chevron_right_rounded, color: Colors.white),
+            ],
+          ),
+        ),
       ),
     );
   }

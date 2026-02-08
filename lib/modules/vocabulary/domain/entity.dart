@@ -1,15 +1,52 @@
+enum LexemeType { noun, verb, adj, adv, prep, phrase, other }
+
+LexemeType lexemeTypeFromString(String v) {
+  switch (v) {
+    case 'NOUN':
+      return LexemeType.noun;
+    case 'VERB':
+      return LexemeType.verb;
+    case 'ADJ':
+      return LexemeType.adj;
+    case 'ADV':
+      return LexemeType.adv;
+    case 'PREP':
+      return LexemeType.prep;
+    case 'PHRASE':
+      return LexemeType.phrase;
+    default:
+      return LexemeType.other;
+  }
+}
+
+String lexemeTypeToString(LexemeType t) {
+  switch (t) {
+    case LexemeType.noun:
+      return 'NOUN';
+    case LexemeType.verb:
+      return 'VERB';
+    case LexemeType.adj:
+      return 'ADJ';
+    case LexemeType.adv:
+      return 'ADV';
+    case LexemeType.prep:
+      return 'PREP';
+    case LexemeType.phrase:
+      return 'PHRASE';
+    case LexemeType.other:
+      return 'OTHER';
+  }
+}
+
 class Lexeme {
   final String id;
   final String languageId;
-  final String type; // NOUN | VERB | ...
+  final LexemeType type;
   final String lemma;
   final String? phoenic;
   final String? audioUrl;
-  final int difficulty; // 1..10
+  final int difficulty;
   final Map<String, dynamic>? tags;
-  final String status; // EntityStatus
-  final DateTime? createdAt;
-  final DateTime? updatedAt;
 
   const Lexeme({
     required this.id,
@@ -20,9 +57,6 @@ class Lexeme {
     required this.audioUrl,
     required this.difficulty,
     required this.tags,
-    required this.status,
-    required this.createdAt,
-    required this.updatedAt,
   });
 }
 
@@ -31,13 +65,11 @@ class Sense {
   final String lexemeId;
   final int senseIndex;
   final String definition;
-  final String domain; // DAILY | ACADEMIC | ...
+  final String domain; // DAILY/ACADEMIC/...
   final String? cefrLevel;
   final Map<String, dynamic>? translations;
   final Map<String, dynamic>? collocations;
-  final String status; // PublishStatus
-  final DateTime? createdAt;
-  final DateTime? updatedAt;
+  final String status; // DRAFT/REVIEW/PUBLISHED...
 
   const Sense({
     required this.id,
@@ -49,8 +81,6 @@ class Sense {
     required this.translations,
     required this.collocations,
     required this.status,
-    required this.createdAt,
-    required this.updatedAt,
   });
 }
 
@@ -62,7 +92,6 @@ class ExampleSentence {
   final String? audioUrl;
   final int difficulty;
   final Map<String, dynamic>? tags;
-  final DateTime? createdAt;
 
   const ExampleSentence({
     required this.id,
@@ -72,29 +101,6 @@ class ExampleSentence {
     required this.audioUrl,
     required this.difficulty,
     required this.tags,
-    required this.createdAt,
-  });
-}
-
-class WeakWord {
-  final String lexemeId;
-  final String lemma;
-  final String type; // LexemeType
-  final String severity; // GOOD | OK | BAD
-  final String errorType; // WordErrorType
-  final int occurCount;
-  final DateTime? lastOccurredAt;
-  final Map<String, dynamic>? evidence;
-
-  const WeakWord({
-    required this.lexemeId,
-    required this.lemma,
-    required this.type,
-    required this.severity,
-    required this.errorType,
-    required this.occurCount,
-    required this.lastOccurredAt,
-    required this.evidence,
   });
 }
 
@@ -102,22 +108,12 @@ class ReviewCard {
   final Lexeme lexeme;
   final List<Sense> senses;
   final List<ExampleSentence> examples;
-  final Map<String, dynamic>? state;
+  final Map<String, dynamic> state;
 
   const ReviewCard({
     required this.lexeme,
     required this.senses,
     required this.examples,
     required this.state,
-  });
-}
-
-class ReviewTodayResponse {
-  final List<ReviewCard> items;
-  final int total;
-
-  const ReviewTodayResponse({
-    required this.items,
-    required this.total,
   });
 }

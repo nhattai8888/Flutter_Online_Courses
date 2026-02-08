@@ -1,16 +1,20 @@
 import 'package:flutter/widgets.dart';
 import 'package:go_router/go_router.dart';
-
 import 'ui/screen.dart';
 
-final List<RouteBase> vocabRoutes = <RouteBase>[
+final List<RouteBase> vocabularyRoutes = <RouteBase>[
   GoRoute(
-    path: '/speaking',
+    path: '/vocab/lesson/:lessonId',
     builder: (BuildContext context, GoRouterState state) {
-      // NOTE: language_id should come from selected language in Curriculum.
-      // For now, it can be passed via query param (?language_id=...)
-      final langId = state.uri.queryParameters['language_id'] ?? '';
-      return VocabularyScreen(languageId: langId);
+      final lessonId = state.pathParameters['lessonId']!;
+      return VocabularyScreen(lessonId: lessonId);
+    },
+  ),
+  GoRoute(
+    path: '/vocab/lexeme/:lexemeId',
+    builder: (BuildContext context, GoRouterState state) {
+      final lexemeId = state.pathParameters['lexemeId']!;
+      return VocabularyScreen(lexemeId: lexemeId);
     },
   ),
 ];

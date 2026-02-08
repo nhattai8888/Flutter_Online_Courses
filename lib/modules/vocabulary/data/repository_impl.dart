@@ -5,84 +5,66 @@ import '../domain/repository.dart';
 import 'api.dart';
 
 class VocabularyRepositoryImpl implements VocabularyRepository {
-  final VocabularyApi _api;
-  VocabularyRepositoryImpl(this._api);
+  final VocabularyApi api;
 
-  T _unwrap<T>(ApiResponse<dynamic> res, T Function(dynamic data) mapper) {
+  VocabularyRepositoryImpl(this.api);
+
+  T _unwrap<T>(ApiResponse<T> res) {
     if (res.status != 'success') {
-      final err = res.error;
-      final msg = res.message ?? 'Request failed';
-      throw AppError(code: 'API_ERROR', message: msg, status: null, raw: err);
+      throw AppError(
+        code: 'API_ERROR',
+        message: res.message ?? 'Request failed',
+        status: null,
+        raw: res.error,
+      );
     }
-    return mapper(res.data);
+    return res.data;
   }
 
-  DateTime? _dt(dynamic v) {
-    if (v == null) return null;
-    final s = v.toString();
-    try {
-      return DateTime.parse(s);
-    } catch (_) {
-      return null;
-    }
-  }
-
-  Lexeme _lexemeFromMap(Map<String, dynamic> m) {
+  Lexeme _mapLexeme(Map<String, dynamic> j) {
     return Lexeme(
-      id: (m['id'] ?? '').toString(),
-      languageId: (m['language_id'] ?? '').toString(),
-      type: (m['type'] ?? '').toString(),
-      lemma: (m['lemma'] ?? '').toString(),
-      phoenic: m['phoenic']?.toString(),
-      audioUrl: m['audio_url']?.toString(),
-      difficulty: (m['difficulty'] is int) ? m['difficulty'] as int : int.tryParse('${m['difficulty']}') ?? 1,
-      tags: (m['tags'] is Map) ? (m['tags'] as Map).cast<String, dynamic>() : null,
-      status: (m['status'] ?? '').toString(),
-      createdAt: _dt(m['created_at']),
-      updatedAt: _dt(m['updated_at']),
+      id: j['id'].toString(),
+      languageId: j['language_id'].toString(),
+      type: lexemeTypeFromString(j['type']?.toString() ?? 'OTHER'),
+      lemma: (j['lemma'] ?? '').toString(),
+      phoenic: j['phoenic']?.toString(),
+      audioUrl: j['audio_url']?.toString(),
+      difficulty: (j['difficulty'] is int) ? (j['difficulty'] as int) : int.tryParse('${j['difficulty']}') ?? 1,
+      tags: (j['tags'] is Map) ? (j['tags'] as Map).cast<String, dynamic>() : null,
     );
   }
 
-  Sense _senseFromMap(Map<String, dynamic> m) {
+  Sense _mapSense(Map<String, dynamic> j) {
     return Sense(
-      id: (m['id'] ?? '').toString(),
-      lexemeId: (m['lexeme_id'] ?? '').toString(),
-      senseIndex: (m['sense_index'] is int) ? m['sense_index'] as int : int.tryParse('${m['sense_index']}') ?? 1,
-      definition: (m['definition'] ?? '').toString(),
-      domain: (m['domain'] ?? '').toString(),
-      cefrLevel: m['cefr_level']?.toString(),
-      translations: (m['translations'] is Map) ? (m['translations'] as Map).cast<String, dynamic>() : null,
-      collocations: (m['collocations'] is Map) ? (m['collocations'] as Map).cast<String, dynamic>() : null,
-      status: (m['status'] ?? '').toString(),
-      createdAt: _dt(m['created_at']),
-      updatedAt: _dt(m['updated_at']),
+      id: j['id'].toString(),
+      lexemeId: j['lexeme_id'].toString(),
+      senseIndex: (j['sense_index'] is int) ? (j['sense_index'] as int) : int.tryParse('${j['sense_index']}') ?? 1,
+      definition: (j['definition'] ?? '').toString(),
+      domain: (j['domain'] ?? 'OTHER').toString(),
+      cefrLevel: j['cefr_level']?.toString(),
+      translations: (j['translations'] is Map) ? (j['translations'] as Map).cast<String, dynamic>() : null,
+      collocations: (j['collocations'] is Map) ? (j['collocations'] as Map).cast<String, dynamic>() : null,
+      status: (j['status'] ?? 'DRAFT').toString(),
     );
   }
 
-  ExampleSentence _exampleFromMap(Map<String, dynamic> m) {
+  ExampleSentence _mapExample(Map<String, dynamic> j) {
     return ExampleSentence(
-      id: (m['id'] ?? '').toString(),
-      senseId: (m['sense_id'] ?? '').toString(),
-      sentence: (m['sentence'] ?? '').toString(),
-      translation: (m['translation'] is Map) ? (m['translation'] as Map).cast<String, dynamic>() : null,
-      audioUrl: m['audio_url']?.toString(),
-      difficulty: (m['difficulty'] is int) ? m['difficulty'] as int : int.tryParse('${m['difficulty']}') ?? 1,
-      tags: (m['tags'] is Map) ? (m['tags'] as Map).cast<String, dynamic>() : null,
-      createdAt: _dt(m['created_at']),
+      id: j['id'].toString(),
+      senseId: j['sense_id'].toString(),
+      sentence: (j['sentence'] ?? '').toString(),
+      translation: (j['translation'] is Map) ? (j['translation'] as Map).cast<String, dynamic>() : null,
+      audioUrl: j['audio_url']?.toString(),
+      difficulty: (j['difficulty'] is int) ? (j['difficulty'] as int) : int.tryParse('${j['difficulty']}') ?? 1,
+      tags: (j['tags'] is Map) ? (j['tags'] as Map).cast<String, dynamic>() : null,
     );
   }
 
-  WeakWord _weakWordFromMap(Map<String, dynamic> m) {
-    return WeakWord(
-      lexemeId: (m['lexeme_id'] ?? '').toString(),
-      lemma: (m['lemma'] ?? '').toString(),
-      type: (m['type'] ?? '').toString(),
-      severity: (m['severity'] ?? '').toString(),
-      errorType: (m['error_type'] ?? '').toString(),
-      occurCount: (m['occur_count'] is int) ? m['occur_count'] as int : int.tryParse('${m['occur_count']}') ?? 0,
-      lastOccurredAt: _dt(m['last_occurred_at']),
-      evidence: (m['evidence'] is Map) ? (m['evidence'] as Map).cast<String, dynamic>() : null,
-    );
+  @override
+  Future<List<Lexeme>> listLexemesByLesson({required String lessonId}) async {
+    final res = await api.listLexemesByLesson(lessonId: lessonId);
+    final list = _unwrap(res);
+    return list.map(_mapLexeme).toList();
   }
 
   @override
@@ -92,104 +74,69 @@ class VocabularyRepositoryImpl implements VocabularyRepository {
     int limit = 50,
     int offset = 0,
   }) async {
-    final res = await _api.listLexemes(languageId: languageId, q: q, limit: limit, offset: offset);
-    return _unwrap<List<Lexeme>>(res, (data) {
-      final list = (data as List?) ?? const [];
-      return list
-          .whereType<Map>()
-          .map((e) => _lexemeFromMap((e as Map).cast<String, dynamic>()))
-          .toList(growable: false);
-    });
+    final res = await api.listLexemes(languageId: languageId, q: q, limit: limit, offset: offset);
+    final list = _unwrap(res);
+    return list.map(_mapLexeme).toList();
   }
 
   @override
-  Future<Lexeme> getLexeme(String lexemeId) async {
-    final res = await _api.getLexeme(lexemeId);
-    return _unwrap<Lexeme>(res, (data) => _lexemeFromMap((data as Map).cast<String, dynamic>()));
+  Future<Lexeme> getLexeme({required String lexemeId}) async {
+    final res = await api.getLexeme(lexemeId: lexemeId);
+    final j = _unwrap(res);
+    return _mapLexeme(j);
   }
 
   @override
-  Future<List<Sense>> listSensesByLexeme(String lexemeId) async {
-    final res = await _api.listSensesByLexeme(lexemeId);
-    return _unwrap<List<Sense>>(res, (data) {
-      final list = (data as List?) ?? const [];
-      return list
-          .whereType<Map>()
-          .map((e) => _senseFromMap((e as Map).cast<String, dynamic>()))
-          .toList(growable: false);
-    });
+  Future<List<Sense>> listSensesByLexeme({required String lexemeId}) async {
+    final res = await api.listSensesByLexeme(lexemeId: lexemeId);
+    final list = _unwrap(res);
+    return list.map(_mapSense).toList();
   }
 
   @override
   Future<List<ExampleSentence>> listExamplesBySense({required String senseId, int limit = 20}) async {
-    final res = await _api.listExamplesBySense(senseId: senseId, limit: limit);
-    return _unwrap<List<ExampleSentence>>(res, (data) {
-      final list = (data as List?) ?? const [];
-      return list
-          .whereType<Map>()
-          .map((e) => _exampleFromMap((e as Map).cast<String, dynamic>()))
-          .toList(growable: false);
-    });
+    final res = await api.listExamplesBySense(senseId: senseId, limit: limit);
+    final list = _unwrap(res);
+    return list.map(_mapExample).toList();
   }
 
   @override
-  Future<ReviewTodayResponse> getReviewToday() async {
-    final res = await _api.getReviewToday();
-    return _unwrap<ReviewTodayResponse>(res, (data) {
-      final m = (data as Map).cast<String, dynamic>();
-      final items = (m['items'] as List?) ?? const [];
-      final total = (m['total'] is int) ? m['total'] as int : int.tryParse('${m['total']}') ?? items.length;
+  Future<List<ReviewCard>> getReviewToday() async {
+    final res = await api.getReviewToday();
+    final data = _unwrap(res);
 
-      final cards = <ReviewCard>[];
-      for (final raw in items) {
-        if (raw is! Map) continue;
-        final card = raw.cast<String, dynamic>();
+    final items = (data['items'] as List? ?? const []);
+    final cards = <ReviewCard>[];
 
-        final lex = card['lexeme'];
-        final senses = (card['senses'] as List?) ?? const [];
-        final examples = (card['examples'] as List?) ?? const [];
+    for (final it in items) {
+      final m = (it as Map).cast<String, dynamic>();
+      final lexeme = _mapLexeme((m['lexeme'] as Map).cast<String, dynamic>());
 
-        if (lex is! Map) continue;
+      final senses = ((m['senses'] as List?) ?? const [])
+          .map((e) => _mapSense((e as Map).cast<String, dynamic>()))
+          .toList();
 
-        cards.add(
-          ReviewCard(
-            lexeme: _lexemeFromMap(lex.cast<String, dynamic>()),
-            senses: senses
-                .whereType<Map>()
-                .map((e) => _senseFromMap((e as Map).cast<String, dynamic>()))
-                .toList(growable: false),
-            examples: examples
-                .whereType<Map>()
-                .map((e) => _exampleFromMap((e as Map).cast<String, dynamic>()))
-                .toList(growable: false),
-            state: (card['state'] is Map) ? (card['state'] as Map).cast<String, dynamic>() : null,
-          ),
-        );
-      }
+      final examples = ((m['examples'] as List?) ?? const [])
+          .map((e) => _mapExample((e as Map).cast<String, dynamic>()))
+          .toList();
 
-      return ReviewTodayResponse(items: cards, total: total);
-    });
+      final state = (m['state'] is Map) ? (m['state'] as Map).cast<String, dynamic>() : <String, dynamic>{};
+
+      cards.add(ReviewCard(lexeme: lexeme, senses: senses, examples: examples, state: state));
+    }
+
+    return cards;
   }
 
   @override
-  Future<void> submitReviewResult({
-    required String lexemeId,
-    required int rating,
-    required String source,
-  }) async {
-    final res = await _api.submitReviewResult(lexemeId: lexemeId, rating: rating, source: source);
-    _unwrap<void>(res, (_) => null);
+  Future<void> submitReviewResult({required String lexemeId, required int rating, required String source}) async {
+    final res = await api.submitReviewResult(lexemeId: lexemeId, rating: rating, source: source);
+    _unwrap(res);
   }
 
   @override
-  Future<List<WeakWord>> getWeakWords({int limit = 50, String? severity}) async {
-    final res = await _api.getWeakWords(limit: limit, severity: severity);
-    return _unwrap<List<WeakWord>>(res, (data) {
-      final list = (data as List?) ?? const [];
-      return list
-          .whereType<Map>()
-          .map((e) => _weakWordFromMap((e as Map).cast<String, dynamic>()))
-          .toList(growable: false);
-    });
+  Future<List<Map<String, dynamic>>> getWeakWords({int limit = 50, String? severity}) async {
+    final res = await api.getWeakWords(limit: limit, severity: severity);
+    return _unwrap(res);
   }
 }

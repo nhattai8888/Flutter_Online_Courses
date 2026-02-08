@@ -1,185 +1,130 @@
 import 'package:flutter/foundation.dart';
-
-import '../../../core/types/app_error.dart';
 import '../domain/entity.dart';
 import '../domain/usecases.dart';
 
 enum VocabularyStatus { idle, loading, ready, error }
 
 class VocabularyController extends ChangeNotifier {
-  final ListLexemesUseCase listLexemes;
+  final ListLexemesByLessonUseCase listLexemesByLesson;
   final GetLexemeUseCase getLexeme;
   final ListSensesByLexemeUseCase listSensesByLexeme;
   final ListExamplesBySenseUseCase listExamplesBySense;
-  final GetReviewTodayUseCase getReviewToday;
-  final SubmitReviewResultUseCase submitReviewResult;
-  final GetWeakWordsUseCase getWeakWords;
 
   VocabularyController({
-    required this.listLexemes,
+    required this.listLexemesByLesson,
     required this.getLexeme,
     required this.listSensesByLexeme,
     required this.listExamplesBySense,
-    required this.getReviewToday,
-    required this.submitReviewResult,
-    required this.getWeakWords,
   });
 
-  VocabularyStatus _status = VocabularyStatus.idle;
-  VocabularyStatus get status => _status;
+  VocabularyStatus status = VocabularyStatus.idle;
+  String? error;
 
-  String? _error;
-  String? get error => _error;
+  String? lessonId;
+  String? lexemeId;
 
-  // UI state
-  String? languageId; // required to list lexemes
-  String query = '';
-
-  List<Lexeme> items = const [];
-  bool loadingMore = false;
-  bool hasMore = true;
-  int limit = 50;
-  int offset = 0;
-
-  // Detail
+  List<Lexeme> lexemes = const [];
   Lexeme? selectedLexeme;
   List<Sense> senses = const [];
-  final Map<String, List<ExampleSentence>> examplesBySenseId = <String, List<ExampleSentence>>{};
+  List<ExampleSentence> examples = const [];
+  String? expandedSenseId;
 
-  // Gamification tabs
-  ReviewTodayResponse? reviewToday;
-  List<WeakWord> weakWords = const [];
+  Future<void> init({String? lessonId, String? lexemeId}) async {
+    this.lessonId = lessonId;
+    this.lexemeId = lexemeId;
 
-  Future<void> init({required String languageId}) async {
-    this.languageId = languageId;
-    await refresh();
-    await preloadSidePanels();
-  }
-
-  Future<void> refresh() async {
-    final lang = languageId;
-    if (lang == null || lang.isEmpty) return;
-
-    _setLoading();
-    try {
-      offset = 0;
-      hasMore = true;
-      items = await listLexemes.call(languageId: lang, q: query, limit: limit, offset: offset);
-      offset += items.length;
-      hasMore = items.length == limit;
-      _setReady();
-    } catch (e) {
-      _setError(_friendlyError(e));
+    if (lexemeId != null) {
+      await loadLexemeDetail(lexemeId);
+      return;
     }
+
+    if (lessonId != null) {
+      await loadLexemesByLesson(lessonId);
+      return;
+    }
+
+    status = VocabularyStatus.error;
+    error = 'Missing lessonId or lexemeId';
+    notifyListeners();
   }
 
-  Future<void> loadMore() async {
-    final lang = languageId;
-    if (lang == null || lang.isEmpty) return;
-    if (!hasMore || loadingMore) return;
-
-    loadingMore = true;
+  Future<void> loadLexemesByLesson(String lessonId) async {
+    status = VocabularyStatus.loading;
+    error = null;
     notifyListeners();
 
     try {
-      final page = await listLexemes.call(languageId: lang, q: query, limit: limit, offset: offset);
-      items = [...items, ...page];
-      offset += page.length;
-      hasMore = page.length == limit;
-    } catch (e) {
-      _setError(_friendlyError(e));
-    } finally {
-      loadingMore = false;
+      final list = await listLexemesByLesson(lessonId: lessonId);
+      lexemes = list;
+      status = VocabularyStatus.ready;
       notifyListeners();
-    }
-  }
 
-  Future<void> setQuery(String q) async {
-    query = q.trim();
-    await refresh();
-  }
-
-  Future<void> openLexeme(String lexemeId) async {
-    _setLoading();
-    try {
-      selectedLexeme = await getLexeme.call(lexemeId);
-      senses = await listSensesByLexeme.call(lexemeId);
-      examplesBySenseId.clear();
-
-      // Load examples for first 2 senses to keep it fast
-      for (int i = 0; i < senses.length && i < 2; i++) {
-        final s = senses[i];
-        final ex = await listExamplesBySense.call(senseId: s.id, limit: 20);
-        examplesBySenseId[s.id] = ex;
+      if (lexemes.isNotEmpty) {
+        await selectLexeme(lexemes.first);
       }
-
-      _setReady();
     } catch (e) {
-      _setError(_friendlyError(e));
+      status = VocabularyStatus.error;
+      error = e.toString();
+      notifyListeners();
     }
   }
 
-  Future<void> loadExamplesForSense(String senseId) async {
-    if (examplesBySenseId.containsKey(senseId)) return;
+  Future<void> selectLexeme(Lexeme l) async {
+    selectedLexeme = l;
+    senses = const [];
+    examples = const [];
+    expandedSenseId = null;
+    notifyListeners();
+
+    await loadSenses(l.id);
+  }
+
+  Future<void> loadLexemeDetail(String lexemeId) async {
+    status = VocabularyStatus.loading;
+    error = null;
+    notifyListeners();
+
     try {
-      final ex = await listExamplesBySense.call(senseId: senseId, limit: 20);
-      examplesBySenseId[senseId] = ex;
+      selectedLexeme = await getLexeme(lexemeId: lexemeId);
+      status = VocabularyStatus.ready;
+      notifyListeners();
+
+      await loadSenses(lexemeId);
+    } catch (e) {
+      status = VocabularyStatus.error;
+      error = e.toString();
+      notifyListeners();
+    }
+  }
+
+  Future<void> loadSenses(String lexemeId) async {
+    try {
+      senses = await listSensesByLexeme(lexemeId: lexemeId);
       notifyListeners();
     } catch (e) {
-      _setError(_friendlyError(e));
-    }
-  }
-
-  Future<void> preloadSidePanels() async {
-    try {
-      // These are optional panels; don't block main.
-      reviewToday = await getReviewToday.call();
-      weakWords = await getWeakWords.call(limit: 50);
+      error = e.toString();
       notifyListeners();
-    } catch (_) {
-      // ignore - keep UI usable
     }
   }
 
-  Future<void> rateReviewCard({
-    required String lexemeId,
-    required int rating,
-    String source = 'QUIZ',
-  }) async {
+  Future<void> toggleSenseExamples(Sense s) async {
+    if (expandedSenseId == s.id) {
+      expandedSenseId = null;
+      examples = const [];
+      notifyListeners();
+      return;
+    }
+
+    expandedSenseId = s.id;
+    examples = const [];
+    notifyListeners();
+
     try {
-      await submitReviewResult.call(lexemeId: lexemeId, rating: rating, source: source);
-      await preloadSidePanels();
+      examples = await listExamplesBySense(senseId: s.id, limit: 20);
+      notifyListeners();
     } catch (e) {
-      _setError(_friendlyError(e));
+      error = e.toString();
+      notifyListeners();
     }
-  }
-
-  void clearError() {
-    _error = null;
-    if (_status == VocabularyStatus.error) _status = VocabularyStatus.ready;
-    notifyListeners();
-  }
-
-  void _setLoading() {
-    _status = VocabularyStatus.loading;
-    _error = null;
-    notifyListeners();
-  }
-
-  void _setReady() {
-    _status = VocabularyStatus.ready;
-    _error = null;
-    notifyListeners();
-  }
-
-  void _setError(String msg) {
-    _status = VocabularyStatus.error;
-    _error = msg;
-    notifyListeners();
-  }
-
-  String _friendlyError(Object e) {
-    if (e is AppError) return e.message;
-    return e.toString().replaceFirst('Exception: ', '');
   }
 }

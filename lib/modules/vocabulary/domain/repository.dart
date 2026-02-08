@@ -1,6 +1,10 @@
 import 'entity.dart';
 
 abstract class VocabularyRepository {
+  Future<List<Lexeme>> listLexemesByLesson({
+    required String lessonId,
+  });
+
   Future<List<Lexeme>> listLexemes({
     required String languageId,
     String? q,
@@ -8,22 +12,29 @@ abstract class VocabularyRepository {
     int offset = 0,
   });
 
-  Future<Lexeme> getLexeme(String lexemeId);
+  Future<Lexeme> getLexeme({
+    required String lexemeId,
+  });
 
-  Future<List<Sense>> listSensesByLexeme(String lexemeId);
+  Future<List<Sense>> listSensesByLexeme({
+    required String lexemeId,
+  });
 
   Future<List<ExampleSentence>> listExamplesBySense({
     required String senseId,
     int limit = 20,
   });
 
-  Future<ReviewTodayResponse> getReviewToday();
+  Future<List<ReviewCard>> getReviewToday();
 
   Future<void> submitReviewResult({
     required String lexemeId,
-    required int rating, // 0..5
-    required String source, // SPEAKING | LISTENING | ...
+    required int rating,
+    required String source,
   });
 
-  Future<List<WeakWord>> getWeakWords({int limit = 50, String? severity});
+  Future<List<Map<String, dynamic>>> getWeakWords({
+    int limit = 50,
+    String? severity,
+  });
 }
