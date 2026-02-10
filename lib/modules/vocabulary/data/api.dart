@@ -8,7 +8,7 @@ class VocabularyApi {
   VocabularyApi({ApiClient? client}) : _client = client ?? ApiClient.instance;
 
   // NEW: lexemes by lesson
-  static String lexemesByLessonPath(String lessonId) => '/lessons/$lessonId/lexemes';
+  static String lexemesByLessonPath(String lessonId) => '/vocab/lessons/$lessonId/lexemes';
 
   // Vocab routers
   static const _lexemesPath = '/vocab/lexemes';

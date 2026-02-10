@@ -43,7 +43,7 @@ class Lexeme {
   final String languageId;
   final LexemeType type;
   final String lemma;
-  final String? phoenic;
+  final String? phonetic;
   final String? audioUrl;
   final int difficulty;
   final Map<String, dynamic>? tags;
@@ -53,7 +53,7 @@ class Lexeme {
     required this.languageId,
     required this.type,
     required this.lemma,
-    required this.phoenic,
+    required this.phonetic,
     required this.audioUrl,
     required this.difficulty,
     required this.tags,

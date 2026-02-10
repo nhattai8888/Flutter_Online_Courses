@@ -27,7 +27,7 @@ class VocabularyRepositoryImpl implements VocabularyRepository {
       languageId: j['language_id'].toString(),
       type: lexemeTypeFromString(j['type']?.toString() ?? 'OTHER'),
       lemma: (j['lemma'] ?? '').toString(),
-      phoenic: j['phoenic']?.toString(),
+      phonetic: j['phonetic']?.toString(),
       audioUrl: j['audio_url']?.toString(),
       difficulty: (j['difficulty'] is int) ? (j['difficulty'] as int) : int.tryParse('${j['difficulty']}') ?? 1,
       tags: (j['tags'] is Map) ? (j['tags'] as Map).cast<String, dynamic>() : null,
@@ -60,12 +60,36 @@ class VocabularyRepositoryImpl implements VocabularyRepository {
     );
   }
 
-  @override
-  Future<List<Lexeme>> listLexemesByLesson({required String lessonId}) async {
-    final res = await api.listLexemesByLesson(lessonId: lessonId);
-    final list = _unwrap(res);
-    return list.map(_mapLexeme).toList();
-  }
+@override
+Future<List<Lexeme>> listLexemesByLesson({required String lessonId}) async {
+  final res = await api.listLexemesByLesson(lessonId: lessonId);
+  final list = _unwrap(res); // list = List<Map<String,dynamic>> of LessonLexemeOut
+
+  // Parse mapping: [{lesson_id, lexeme_id, is_core, sort_order}]
+  final links = list
+      .map((e) => (e as Map).cast<String, dynamic>())
+      .toList();
+
+  // Sort theo sort_order (Duolingo-like ordering)
+  links.sort((a, b) => ((a['sort_order'] ?? 0) as int).compareTo((b['sort_order'] ?? 0) as int));
+
+  // Fetch lexeme details bằng lexeme_id
+  final lexemeIds = links
+      .map((m) => (m['lexeme_id'] ?? '').toString())
+      .where((id) => id.isNotEmpty && id != 'null')
+      .toList();
+
+  if (lexemeIds.isEmpty) return <Lexeme>[];
+
+  // gọi song song để nhanh
+  final futures = lexemeIds.map((id) async {
+    final r = await api.getLexeme(lexemeId: id);
+    final j = _unwrap(r);
+    return _mapLexeme(j);
+  }).toList();
+
+  return Future.wait(futures);
+}
 
   @override
   Future<List<Lexeme>> listLexemes({

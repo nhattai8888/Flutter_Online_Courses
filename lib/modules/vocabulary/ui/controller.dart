@@ -55,6 +55,7 @@ class VocabularyController extends ChangeNotifier {
 
     try {
       final list = await listLexemesByLesson(lessonId: lessonId);
+      print(list);
       lexemes = list;
       status = VocabularyStatus.ready;
       notifyListeners();
@@ -70,6 +71,11 @@ class VocabularyController extends ChangeNotifier {
   }
 
   Future<void> selectLexeme(Lexeme l) async {
+    if (l.id.isEmpty || l.id == 'null') {
+    error = 'Lexeme id invalid: ${l.id}';
+    notifyListeners();
+    return;
+  }
     selectedLexeme = l;
     senses = const [];
     examples = const [];
@@ -100,6 +106,7 @@ class VocabularyController extends ChangeNotifier {
   Future<void> loadSenses(String lexemeId) async {
     try {
       senses = await listSensesByLexeme(lexemeId: lexemeId);
+      print('senses: $senses');
       notifyListeners();
     } catch (e) {
       error = e.toString();

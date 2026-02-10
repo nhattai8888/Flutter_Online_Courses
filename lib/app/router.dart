@@ -23,7 +23,7 @@ class AppRouter {
         redirect: (context, state) => '/curriculum',
       ),
       ...authRoutes,
-      ...vocabRoutes,
+      ...vocabularyRoutes,
       ...lessonRoutes,
       ShellRoute(
         builder: (context, state, child) => MainShellScreen(
